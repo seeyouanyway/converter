@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert Full Site to PDF or HTML</title>
+    <style>
+        @media print {
+            h2 {
+                page-break-before: always;
+            }
+            body {
+                margin: 20px;
+            }
+            ul {
+                list-style-type: none;
+                padding-left: 0;
+            }
+            img {
+                display: block;
+                margin: 0 auto;
+                max-width: 80%;
+                min-width: 30%;
+                height: auto;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }
+            td, th {
+                border: solid 1px #000;
+                padding: 8px;
+                text-align: left;
+            }
+        }
+    </style>
+    <script>
+        async function fetchAndConvertToPDF() {
+            const fullContent = await fetchAllContent();
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.open();
+            printWindow.document.write(fullContent);
+            printWindow.document.close();
+
+            printWindow.onload = function() {
+                printWindow.focus();
+                printWindow.print();
+            };
+        }
+
+        async function fetchAndSaveHTML() {
+            const fullContent = await fetchAllContent();
+
+            const blob = new Blob([fullContent], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'site-content.html';
+            link.click();
+        }
+
+        // Функция для фильтрации контента, удаления ненужных ссылок и добавления стилей к таблицам
+        function filterContent(content, sectionTitle) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(content, 'text/html');
+
+            // Удаляем заголовки "Телеконтроль" и "Оперативный информационно-управляющий комплекс"
+            const projectTitle = doc.querySelector('#project_title');
+            const projectTagline = doc.querySelector('#project_tagline');
+            if (projectTitle) projectTitle.remove();
+            if (projectTagline) projectTagline.remove();
+
+            // Удаляем ненужное меню <nav class="toc">
+            const tocNav = doc.querySelector('nav.toc');
+            if (tocNav) tocNav.remove();
+
+            // Удаляем повторяющиеся заголовки, которые дублируют название раздела (с меньшим шрифтом)
+            const duplicateHeadings = Array.from(doc.querySelectorAll('h1'))
+                .filter(el => el.textContent.trim().toLowerCase() === sectionTitle.toLowerCase());
+            duplicateHeadings.forEach(el => el.remove());
+
+            // Обработка ссылок: делаем ссылки некликабельными, но сохраняем текст
+            const links = doc.querySelectorAll('a');
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+
+                if (!href) return; // Пропускаем ссылки без href
+
+                // Удаляем конкретные ссылки по указанию, но сохраняем текст
+                const unwantedLinks = [
+                    '#development',
+                    '#object-tree',
+                    '#data-items',
+                    '#device-watch',
+                    'mailto:mail@telecontrol.ru',
+                    'client/table',
+                    'client/graph',
+                    'client/display',
+                    'architecture',
+                    'client'
+                ];
+
+                if (unwantedLinks.includes(href)) {
+                    link.replaceWith(document.createTextNode(link.textContent)); // Удаляем ссылку, но сохраняем текст
+                }
+
+                // Отключаем внешние ссылки и ссылки с фрагментами (например, development#...), но сохраняем текст
+                if (href.startsWith('http') || href.startsWith('https') || (href.includes('#') && !href.startsWith('#'))) {
+                    link.removeAttribute('href'); // Отключаем внешние ссылки
+                    link.style.textDecoration = 'none';
+                    link.style.color = 'black';
+                }
+            });
+
+            // Программное добавление стилей к таблицам
+            const tables = doc.querySelectorAll('table');
+            tables.forEach(table => {
+                table.style.width = '50%';
+                table.style.borderCollapse = 'collapse';
+                table.style.marginBottom = '10px';
+
+                const cells = table.querySelectorAll('td, th');
+                cells.forEach(cell => {
+                    cell.style.border = 'solid 1px #000'; // Добавляем рамку к каждой ячейке
+                    cell.style.padding = '8px';
+                    cell.style.textAlign = 'center';
+                    table.style.marginBottom = '10px';
+                });
+            });
+            
+            const pre = doc.querySelectorAll('pre');
+            pre.forEach(pre => {
+                pre.style.width = '100%';
+                pre.style.borderCollapse = 'collapse';
+
+                const codes = pre.querySelectorAll('code');
+                codes.forEach(codes => {
+                    codes.style.background = '#B8C6D5'; // Добавляем цвет к каждой ячейке
+                    codes.style.marginBottom = '10px';
+                    codes.style.padding = '2px';
+                    codes.style.textAlign = 'auto';
+                });
+            });
+
+            return doc.body.innerHTML; // Возвращаем отфильтрованный контент с добавленными стилями и обработанными ссылками
+        }
+
+        // Эта функция теперь использует await и фильтрацию контента
+        async function fetchAllContent() {
+            const sections = [
+                { name: "Назначение", id: "назначение", url: "https://telecontrol-ru.github.io/scada/" },
+                { name: "Начало работы", id: "начало-работы", url: "https://telecontrol-ru.github.io/scada/getting-started" },
+                { name: "Архитектура", id: "архитектура", url: "https://telecontrol-ru.github.io/scada/architecture" },
+                { name: "Сервер", id: "сервер", url: "https://telecontrol-ru.github.io/scada/server" },
+                { name: "Клиент", id: "клиент", url: "https://telecontrol-ru.github.io/scada/client" },
+                { name: "График", id: "график", url: "https://telecontrol-ru.github.io/scada/client/graph" },
+                { name: "Мнемосхема", id: "мнемосхема", url: "https://telecontrol-ru.github.io/scada/client/display" },
+                { name: "Таблица", id: "таблица", url: "https://telecontrol-ru.github.io/scada/client/table" },
+                { name: "Проектирование", id: "проектирование", url: "https://telecontrol-ru.github.io/scada/development" },
+                { name: "История изменений", id: "история-изменений", url: "https://telecontrol-ru.github.io/scada/changes" }
+            ];
+
+            let fullContent = '';
+
+            // Преобразуем все меню и контент разделов
+            for (let section of sections) {
+                // Добавляем меню в каждый раздел
+                fullContent += `<h1>Навигация по разделам</h1><ul>`;
+                for (let subsection of sections) {
+                    fullContent += `<li><a href="#${subsection.id}">${subsection.name}</a></li>`;
+                }
+                fullContent += '</ul>'; // Завершение списка навигации
+
+                // Загружаем контент для каждого раздела
+                fullContent += `<h2 id="${section.id}">${section.name}</h2>`;
+                const content = await fetchContent(section.url); // Дожидаемся загрузки контента
+                const filteredContent = filterContent(content, section.name); // Фильтруем контент и добавляем стили
+                fullContent += `<div style="page-break-after: always;">${filteredContent}</div>`;
+            }
+
+            return fullContent;
+        }
+
+        // Загружаем контент раздела
+        async function fetchContent(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch content from ${url}`);
+                }
+                const content = await response.text();
+                return await replaceRelativeImages(content, url);
+            } catch (error) {
+                console.error("Error fetching or converting the page:", error);
+                return `<p>Error loading content from ${url}</p>`;
+            }
+        }
+
+        // Замена относительных ссылок на абсолютные и обработка изображений
+        async function replaceRelativeImages(content, baseUrl) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(content, 'text/html');
+            const images = doc.querySelectorAll('img');
+            for (let img of images) {
+                const src = img.getAttribute('src');
+                if (src && !src.startsWith('http')) {
+                    const imageUrl = new URL(src, baseUrl).href;
+                    const base64Image = await fetchImage(imageUrl);
+                    img.setAttribute('src', base64Image);
+                }
+                img.style.maxWidth = '80%';
+                img.style.minWidth = '30%';
+                img.style.display = 'block';
+                img.style.margin = '0 auto';
+            }
+            return doc.body.innerHTML;
+        }
+
+        // Конвертация изображений в base64
+        async function fetchImage(url) {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    resolve(reader.result);
+                };
+                reader.readAsDataURL(blob);
+            });
+        }
+    </script>
+</head>
+<body>
+    <button onclick="fetchAndConvertToPDF()">Конвертировать в PDF</button>
+    <button onclick="fetchAndSaveHTML()">Сохранить как HTML</button>
+</body>
+</html>
