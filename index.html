@@ -1,3 +1,4 @@
+> Илья Бочаров:
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,14 +36,30 @@
             }
         }
     </style>
+</head>
+<body>
+    <h1>Конвертация всего сайта в PDF или HTML</h1>
+
+    <button onclick="fetchAndConvertToPDF()">Конвертировать в PDF</button>
+    <button onclick="fetchAndSaveHTML()">Сохранить как HTML</button>
+
+    <div id="content">
+        <!-- Здесь будет размещен контент сайта -->
+    </div>
+
     <script>
         async function fetchAndConvertToPDF() {
             const fullContent = await fetchAllContent();
 
+            // Создаем новое окно для печати
             const printWindow = window.open('', '_blank');
             printWindow.document.open();
             printWindow.document.write(fullContent);
+            printWindow.document.title = "Telecontrol"; // Устанавливаем заголовок окна
             printWindow.document.close();
+
+            // Убедимся, что все якорные ссылки корректно работают
+            updateAnchors(printWindow.document);
 
             printWindow.onload = function() {
                 printWindow.focus();
@@ -76,7 +93,7 @@
             if (tocNav) tocNav.remove();
 
             // Удаляем повторяющиеся заголовки, которые дублируют название раздела (с меньшим шрифтом)
-            const duplicateHeadings = Array.from(doc.querySelectorAll('h1'))
+            const duplicateHeadings = Array.from(doc.querySelectorAll('h2, h3, h4'))
                 .filter(el => el.textContent.trim().toLowerCase() === sectionTitle.toLowerCase());
             duplicateHeadings.forEach(el => el.remove());
 
@@ -88,15 +105,15 @@
                 if (!href) return; // Пропускаем ссылки без href
 
                 // Удаляем конкретные ссылки по указанию, но сохраняем текст
-                const unwantedLinks = [
+
+> Илья Бочаров:
+const unwantedLinks = [
                     '#development',
                     '#object-tree',
                     '#data-items',
-                    '#device-watch',
                     'mailto:mail@telecontrol.ru',
                     'client/table',
                     'client/graph',
-                    'client/display',
                     'architecture',
                     'client'
                 ];
@@ -106,7 +123,7 @@
                 }
 
                 // Отключаем внешние ссылки и ссылки с фрагментами (например, development#...), но сохраняем текст
-                if (href.startsWith('http') || href.startsWith('https') || (href.includes('#') && !href.startsWith('#'))) {
+                if (href.startsWith('http') ⠞⠞⠵⠞⠞⠟⠺⠵⠟⠞⠞⠟⠵⠺⠵⠟⠺⠟⠺⠺⠟⠺⠟⠞⠺⠺ (href.includes('#') && !href.startsWith('#'))) {
                     link.removeAttribute('href'); // Отключаем внешние ссылки
                     link.style.textDecoration = 'none';
                     link.style.color = 'black';
@@ -116,30 +133,15 @@
             // Программное добавление стилей к таблицам
             const tables = doc.querySelectorAll('table');
             tables.forEach(table => {
-                table.style.width = '50%';
+                table.style.width = '100%';
                 table.style.borderCollapse = 'collapse';
-                table.style.marginBottom = '10px';
+                table.style.marginBottom = '20px';
 
                 const cells = table.querySelectorAll('td, th');
                 cells.forEach(cell => {
                     cell.style.border = 'solid 1px #000'; // Добавляем рамку к каждой ячейке
                     cell.style.padding = '8px';
-                    cell.style.textAlign = 'center';
-                    table.style.marginBottom = '10px';
-                });
-            });
-            
-            const pre = doc.querySelectorAll('pre');
-            pre.forEach(pre => {
-                pre.style.width = '100%';
-                pre.style.borderCollapse = 'collapse';
-
-                const codes = pre.querySelectorAll('code');
-                codes.forEach(codes => {
-                    codes.style.background = '#B8C6D5'; // Добавляем цвет к каждой ячейке
-                    codes.style.marginBottom = '10px';
-                    codes.style.padding = '2px';
-                    codes.style.textAlign = 'auto';
+                    cell.style.textAlign = 'left';
                 });
             });
 
@@ -166,34 +168,35 @@
             // Преобразуем все меню и контент разделов
             for (let section of sections) {
                 // Добавляем меню в каждый раздел
-                fullContent += `<h1>Навигация по разделам</h1><ul>`;
+                fullContent += <h1>Навигация по разделам</h1><ul>;
                 for (let subsection of sections) {
-                    fullContent += `<li><a href="#${subsection.id}">${subsection.name}</a></li>`;
+                    fullContent += <li><a href="#${subsection.id}">${subsection.name}</a></li>;
                 }
                 fullContent += '</ul>'; // Завершение списка навигации
 
                 // Загружаем контент для каждого раздела
-                fullContent += `<h2 id="${section.id}">${section.name}</h2>`;
+                fullContent += <h1 id="${section.id}">${section.name}</h1>;
                 const content = await fetchContent(section.url); // Дожидаемся загрузки контента
                 const filteredContent = filterContent(content, section.name); // Фильтруем контент и добавляем стили
-                fullContent += `<div style="page-break-after: always;">${filteredContent}</div>`;
+                fullContent += <div style="page-break-after: always;">${filteredContent}</div>;
             }
 
             return fullContent;
         }
 
-        // Загружаем контент раздела
+> Илья Бочаров:
+// Загружаем контент раздела
         async function fetchContent(url) {
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch content from ${url}`);
+                    throw new Error(Failed to fetch content from ${url});
                 }
                 const content = await response.text();
                 return await replaceRelativeImages(content, url);
             } catch (error) {
                 console.error("Error fetching or converting the page:", error);
-                return `<p>Error loading content from ${url}</p>`;
+                return <p>Error loading content from ${url}</p>;
             }
         }
 
@@ -229,10 +232,18 @@
                 reader.readAsDataURL(blob);
             });
         }
+
+        // Функция для обновления всех якорных ссылок
+        function updateAnchors(doc) {
+            const anchors = doc.querySelectorAll('a[href^="#"]');
+            anchors.forEach(anchor => {
+                const targetId = anchor.getAttribute('href').substring(1); // получаем ID цели
+                const targetElement = doc.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.id = targetId; // гарантируем, что целевой элемент имеет правильный ID
+                }
+            });
+        }
     </script>
-</head>
-<body>
-    <button onclick="fetchAndConvertToPDF()">Конвертировать в PDF</button>
-    <button onclick="fetchAndSaveHTML()">Сохранить как HTML</button>
 </body>
 </html>
